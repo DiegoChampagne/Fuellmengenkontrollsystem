@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Füllmengenkontrolle
+Comment=Gleichförmigkeit der Masse einzeldosierter Arzneiformen
+Exec=bash -c 'cd "$(dirname "%k")" && ./start.sh'
+Terminal=false
+Categories=Education;Science;
