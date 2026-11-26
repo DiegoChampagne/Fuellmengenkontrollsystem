@@ -76,6 +76,51 @@ Gruppe `lp`). Alternativ `cups` (Warteschlangenname aus `lpstat -p`, Raw-
 Queue) oder `network` (IP, Port 9100). Die Nummer der Gerätedatei kann sich
 ändern; ein fester Name lässt sich mit einer udev-Regel vergeben.
 
+## Schüler-Konto einrichten (Linux/KDE)
+
+Für den Einsatz mit Schüler:innen (auch bei Leistungsnachweisen) richtet ein
+Skript ein eingeschränktes Konto ein. Aus dem Lehrkraft-Konto (Administrator):
+
+```bash
+git clone https://github.com/DiegoChampagne/Fuellmengenkontrollsystem.git
+cd Fuellmengenkontrollsystem
+sudo bash schueler_einrichten.sh
+```
+
+Das Skript installiert die neueste Version nach `/opt/fuellmengenkontrolle`
+und legt das Konto `schueler` an:
+
+- Anmeldung **ohne Passwort** (Konto wählen, Eingabetaste),
+- **keine Administratorrechte**, kein Schreibzugriff auf Programm und
+  Einstellungen (`config.json` darf nur das Lehrkraft-Konto ändern),
+- **kein Netzzugang** nur für dieses Konto (nftables-Regel, bleibt nach einem
+  Neustart bestehen; andere Konten sind nicht betroffen),
+- Messdaten landen in `/var/lib/fuellmengenkontrolle` (über die Umgebungs-
+  variable `FUELLMENGEN_DATEN` einstellbar),
+- Programmstart im Anwendungsmenü und automatisch bei der Anmeldung.
+
+Danach im Lehrkraft-Konto das Programm öffnen, die Einstellungen aufrufen und
+ein **Passwort festlegen**, den Testmodus ausschalten und die Waage auf
+`seriell` stellen. Das Skript kann jederzeit erneut ausgeführt werden und
+holt dabei die neueste Version; Updates gehen auch mit `./update.sh` im
+Ordner `/opt/fuellmengenkontrolle`. Einstellungen und Messdaten eines alten
+Ordners übernimmt `sudo ALT_ORDNER=/pfad/zum/alten/ordner bash schueler_einrichten.sh`.
+
+### Feste USB-Namen für Waage und Drucker
+
+Damit sich die Einstellungen nicht ändern, wenn ein Gerät in eine andere
+Buchse gesteckt wird, vergibt `usb_regeln_einrichten.sh` feste Namen
+(`/dev/waage`, `/dev/bondrucker`) anhand der USB-Kennung der Geräte:
+
+```bash
+sudo bash usb_regeln_einrichten.sh
+```
+
+Waage und Drucker vorher anschließen und einschalten, dann die Nummern der
+Geräte aus der Liste wählen (Enter überspringt ein Gerät). In den
+Einstellungen trägt man danach `/dev/waage` als Port sowie das Backend `file`
+mit der Gerätedatei `/dev/bondrucker` ein.
+
 ## Erste Schritte
 
 1. Programm starten, **Einstellungen** öffnen. Beim ersten Mal wird ein
@@ -161,6 +206,8 @@ printer.py           Druck-Backends (win32raw, windows_text, cups, file, network
 storage.py           SQLite-Speicherung, CSV-Export
 config.py            Einstellungen, Tabellen, Passwort-Hash
 update.sh/.bat       Update von GitHub (git pull + Pakete)
+schueler_einrichten.sh   Schüler-Konto ohne Passwort, ohne Internet (Linux)
+usb_regeln_einrichten.sh Feste USB-Namen für Waage und Drucker (Linux)
 ```
 
 ## Datenschutz und Sicherheit
