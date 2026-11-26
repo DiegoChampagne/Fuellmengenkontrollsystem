@@ -205,6 +205,18 @@ class AppConfig:
     datenbank_pfad: str = "fuellmengenkontrolle.db"
 
 
+def daten_ordner() -> str:
+    """Ordner für veränderliche Daten (Datenbank). Standard: der Programmordner.
+    Über die Umgebungsvariable FUELLMENGEN_DATEN kann er umgelenkt werden,
+    z.B. wenn der Programmordner schreibgeschützt ist (Schüler-Konto)."""
+    return os.environ.get("FUELLMENGEN_DATEN") or os.path.dirname(os.path.abspath(__file__))
+
+
+def datenbank_pfad_aufloesen(pfad: str) -> str:
+    """Relative Datenbankpfade werden im Datenordner angelegt."""
+    return pfad if os.path.isabs(pfad) else os.path.join(daten_ordner(), pfad)
+
+
 def load_config() -> AppConfig:
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:

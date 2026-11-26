@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from config import (
     AppConfig, load_config, save_config, DARREICHUNGSFORMEN, KAPSELGROESSEN,
     tara_fuer_darreichungsform, nennfuellmenge_fuer_darreichungsform,
-    hash_passwort, pruefe_passwort, t1_prozent_tabelle_2_9_5,
+    hash_passwort, pruefe_passwort, datenbank_pfad_aufloesen, t1_prozent_tabelle_2_9_5,
 )
 from balance import BalanceReader, BalanceConfig, ManualBalance
 from calculations import compute_stats
@@ -672,7 +672,7 @@ class MainWindow(QMainWindow):
             )
 
         save_sample(
-            self.config.datenbank_pfad,
+            datenbank_pfad_aufloesen(self.config.datenbank_pfad),
             proben_id,
             self.nr_spin.value(),
             self.nennfuellm_spin.value(),
@@ -721,8 +721,26 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Nicht identisch", "Die beiden Eingaben stimmen nicht überein.")
             return False
         self.config.einstellungen_passwort_hash = hash_passwort(pw1)
-        save_config(self.config)
+        if not self._speichere_config():
+            # Ohne dauerhaft gespeichertes Passwort keine Einstellungen öffnen.
+            self.config.einstellungen_passwort_hash = ""
+            return False
         return True
+
+    def _speichere_config(self) -> bool:
+        """Speichert config.json; meldet einen Fehler (z.B. fehlende
+        Schreibrechte im Schüler-Konto) statt abzustürzen."""
+        try:
+            save_config(self.config)
+            return True
+        except OSError as e:
+            QMessageBox.warning(
+                self, "Nicht gespeichert",
+                "Die Einstellungen konnten nicht gespeichert werden (in diesem "
+                "Benutzerkonto fehlen die Schreibrechte). Dauerhaft ändern kann "
+                "man sie nur im Lehrkraft-Konto.\n\n" + str(e),
+            )
+            return False
 
     def _open_settings(self):
         if not self.config.einstellungen_passwort_hash:
@@ -744,7 +762,7 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self.config, self)
         if dlg.exec() == QDialog.Accepted:
             self.config = dlg.result_config()
-            save_config(self.config)
+            self._speichere_config()
             self.umfang_spin.setValue(self.config.stichprobenumfang)
             self._on_darreichungsform_changed(self.darreichungsform_combo.currentText())
             self._init_balance()

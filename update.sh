@@ -13,6 +13,10 @@ if [ ! -d .git ]; then
     exit 1
 fi
 
+# Ausfuehrbar-Bit der Skripte nicht als "Aenderung" werten (sonst kann ein
+# spaeteres "git pull" mit einer Meldung ueber lokale Aenderungen abbrechen).
+git config core.fileMode false
+
 vorher=$(git rev-parse HEAD)
 req_vorher=$(sha256sum requirements.txt 2>/dev/null)
 
