@@ -37,6 +37,17 @@ eigenschaft() {  # $1 = Geraetedatei, $2 = Schluessel
     "$UDEVADM" info -q property -n "$1" 2>/dev/null | sed -n "s/^$2=//p" | head -n 1
 }
 
+attribut() {  # $1 = Geraetedatei, $2 = USB-Attribut (Ersatz, falls udev keine ID_*-Werte liefert)
+    "$UDEVADM" info -a -n "$1" 2>/dev/null \
+        | sed -n "s/^[[:space:]]*ATTRS{$2}==\"\(.*\)\"/\1/p" | head -n 1
+}
+
+# Treiber fuer USB-Drucker (erzeugt /dev/usb/lp*) laden, falls noch nicht geschehen
+if [ "$NUR_REGELDATEI" != "1" ]; then
+    modprobe usblp 2>/dev/null || true
+    sleep 1
+fi
+
 # Gruppe der seriellen Schnittstellen unterscheidet sich je nach Distribution
 if getent group dialout >/dev/null 2>&1; then GRUPPE_SERIELL=dialout; else GRUPPE_SERIELL=uucp; fi
 GRUPPE_DRUCKER=lp
@@ -47,11 +58,15 @@ for n in $GERAETE_MUSTER; do
     [ -e "$n" ] || continue
     vid="$(eigenschaft "$n" ID_VENDOR_ID)"
     pid="$(eigenschaft "$n" ID_MODEL_ID)"
+    [ -n "$vid" ] || vid="$(attribut "$n" idVendor)"
+    [ -n "$pid" ] || pid="$(attribut "$n" idProduct)"
     [ -n "$vid" ] && [ -n "$pid" ] || continue
     name="$(eigenschaft "$n" ID_MODEL_FROM_DATABASE)"
     [ -n "$name" ] || name="$(eigenschaft "$n" ID_MODEL)"
+    [ -n "$name" ] || name="$(attribut "$n" product)"
     hersteller="$(eigenschaft "$n" ID_VENDOR_FROM_DATABASE)"
     [ -n "$hersteller" ] || hersteller="$(eigenschaft "$n" ID_VENDOR)"
+    [ -n "$hersteller" ] || hersteller="$(attribut "$n" manufacturer)"
     NODES+=("$n"); VIDS+=("$vid"); PIDS+=("$pid"); NAMEN+=("$hersteller $name")
 done
 
@@ -60,6 +75,18 @@ if [ "${#NODES[@]}" -eq 0 ]; then
     echo "Waage und Drucker anschliessen, einschalten und das Skript erneut starten."
     echo "(Falls der Drucker fehlt:  sudo modprobe usblp  - dann nochmal.)"
     exit 1
+fi
+
+# Hinweis, wenn kein Drucker (/dev/usb/lp*) dabei ist
+HAT_DRUCKER=0
+for n in "${NODES[@]}"; do case "$n" in */lp[0-9]*) HAT_DRUCKER=1;; esac; done
+if [ "$HAT_DRUCKER" -eq 0 ]; then
+    echo "Hinweis: Es wurde KEIN Drucker unter /dev/usb/ gefunden. Moegliche Ursachen:"
+    echo "  - Drucker aus oder nicht per USB verbunden (Kabel, direkter Anschluss ohne Hub testen)"
+    echo "  - Drucker erscheint nicht in 'lsusb' -> Hardware/Kabel pruefen"
+    echo "  - Treiber 'usblp' nicht geladen oder gesperrt: lsmod | grep usblp ; dmesg | tail"
+    echo "  Danach dieses Skript erneut starten (die Waagen-Regel bleibt erhalten)."
+    echo
 fi
 
 echo "Gefundene Geraete:"
